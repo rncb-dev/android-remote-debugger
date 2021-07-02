@@ -17,12 +17,12 @@ package zerobranch.androidremotedebugger.logging;
 
 import android.os.Build;
 
+import androidx.annotation.NonNull;
+
 import zerobranch.androidremotedebugger.source.local.LogLevel;
 import zerobranch.androidremotedebugger.source.managers.ContinuousDBManager;
 import zerobranch.androidremotedebugger.source.models.LogModel;
 import zerobranch.androidremotedebugger.utils.InternalUtils;
-
-import org.jetbrains.annotations.NotNull;
 
 public final class RemoteLog {
     private static final String DEFAULT_TAG = RemoteLog.class.getSimpleName();
@@ -71,7 +71,7 @@ public final class RemoteLog {
         }
     }
 
-    private void partialLogs(int priority, String tag, @NotNull String msg, Throwable th) {
+    private void partialLogs(int priority, String tag, @NonNull String msg, Throwable th) {
         if (msg.length() < MAX_LOG_LENGTH) {
             logger.log(priority, tag, msg, th);
             return;

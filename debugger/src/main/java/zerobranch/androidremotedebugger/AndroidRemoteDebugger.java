@@ -18,14 +18,14 @@ package zerobranch.androidremotedebugger;
 import android.app.ActivityManager;
 import android.content.Context;
 
+import androidx.annotation.NonNull;
+
 import zerobranch.androidremotedebugger.logging.DefaultLogger;
 import zerobranch.androidremotedebugger.logging.Logger;
 import zerobranch.androidremotedebugger.logging.RemoteLog;
 import zerobranch.androidremotedebugger.settings.InternalSettings;
 import zerobranch.androidremotedebugger.source.local.LogLevel;
 import zerobranch.androidremotedebugger.source.managers.ContinuousDBManager;
-
-import org.jetbrains.annotations.NotNull;
 
 public final class AndroidRemoteDebugger {
     private static final int DEFAULT_PORT = 8080;
@@ -146,7 +146,7 @@ public final class AndroidRemoteDebugger {
             private final Thread.UncaughtExceptionHandler originalHandler = Thread.getDefaultUncaughtExceptionHandler();
 
             @Override
-            public void uncaughtException(@NotNull Thread t, @NotNull Throwable e) {
+            public void uncaughtException(@NonNull Thread t, @NonNull Throwable e) {
                 Log.wtf(e);
                 if (originalHandler != null) {
                     originalHandler.uncaughtException(t, e);

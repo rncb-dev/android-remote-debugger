@@ -15,6 +15,8 @@
  */
 package zerobranch.androidremotedebugger.logging;
 
+import androidx.annotation.NonNull;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.URL;
@@ -62,7 +64,7 @@ public class NetLoggingInterceptor implements Interceptor {
     }
 
     @Override
-    public Response intercept(Chain chain) throws IOException {
+    public Response intercept(@NonNull Chain chain) throws IOException {
         if (!AndroidRemoteDebugger.isEnable()) {
             return chain.proceed(chain.request());
         }

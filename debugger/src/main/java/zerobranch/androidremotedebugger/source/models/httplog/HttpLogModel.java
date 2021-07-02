@@ -15,7 +15,7 @@
  */
 package zerobranch.androidremotedebugger.source.models.httplog;
 
-import org.jetbrains.annotations.NotNull;
+import androidx.annotation.NonNull;
 
 import java.util.List;
 
@@ -39,7 +39,7 @@ public class HttpLogModel {
     public QueryType queryType;
     public List<String> headers;
 
-    @NotNull
+    @NonNull
     @Override
     public String toString() {
         return "HttpLogModel{" +
