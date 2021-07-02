@@ -15,16 +15,6 @@
  */
 package zerobranch.androidremotedebugger.logging;
 
-import zerobranch.androidremotedebugger.AndroidRemoteDebugger;
-import zerobranch.androidremotedebugger.source.managers.ContinuousDBManager;
-import zerobranch.androidremotedebugger.source.mapper.HttpLogRequestMapper;
-import zerobranch.androidremotedebugger.source.mapper.HttpLogResponseMapper;
-import zerobranch.androidremotedebugger.source.models.httplog.HttpLogModel;
-import zerobranch.androidremotedebugger.source.models.httplog.HttpLogRequest;
-import zerobranch.androidremotedebugger.source.models.httplog.HttpLogResponse;
-
-import org.jetbrains.annotations.NotNull;
-
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.URL;
@@ -40,12 +30,24 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
-import okhttp3.internal.http.HttpHeaders;
 import okio.Buffer;
 import okio.BufferedSource;
 import okio.GzipSource;
+import zerobranch.androidremotedebugger.AndroidRemoteDebugger;
+import zerobranch.androidremotedebugger.source.managers.ContinuousDBManager;
+import zerobranch.androidremotedebugger.source.mapper.HttpLogRequestMapper;
+import zerobranch.androidremotedebugger.source.mapper.HttpLogResponseMapper;
+import zerobranch.androidremotedebugger.source.models.httplog.HttpLogModel;
+import zerobranch.androidremotedebugger.source.models.httplog.HttpLogRequest;
+import zerobranch.androidremotedebugger.source.models.httplog.HttpLogResponse;
+
+import static java.net.HttpURLConnection.HTTP_NOT_MODIFIED;
+import static java.net.HttpURLConnection.HTTP_NO_CONTENT;
 
 public class NetLoggingInterceptor implements Interceptor {
+
+    private static final int HTTP_CONTINUE = 100;
+
     private static final Charset UTF8 = StandardCharsets.UTF_8;
     private static final AtomicInteger queryNumber = new AtomicInteger(0);
     private final HttpLogRequestMapper requestMapper = new HttpLogRequestMapper();
@@ -59,9 +61,8 @@ public class NetLoggingInterceptor implements Interceptor {
         this.httpLogger = httpLogger;
     }
 
-    @NotNull
     @Override
-    public Response intercept(@NotNull Chain chain) throws IOException {
+    public Response intercept(Chain chain) throws IOException {
         if (!AndroidRemoteDebugger.isEnable()) {
             return chain.proceed(chain.request());
         }
@@ -172,12 +173,12 @@ public class NetLoggingInterceptor implements Interceptor {
         }
 
         ResponseBody responseBody = response.body();
-        if (HttpHeaders.promisesBody(response) && responseBody != null) {
+        if (promisesBody(response) && responseBody != null) {
             long responseContentLength = responseBody.contentLength();
 
             BufferedSource source = responseBody.source();
             source.request(Long.MAX_VALUE);
-            Buffer buffer = source.getBuffer();
+            Buffer buffer = source.buffer();
 
             if ("gzip".equalsIgnoreCase(responseHeaders.get("Content-Encoding"))) {
                 try (GzipSource gzippedResponseBody = new GzipSource(buffer.clone())) {
@@ -208,6 +209,41 @@ public class NetLoggingInterceptor implements Interceptor {
         }
 
         return response;
+    }
+
+    boolean promisesBody(Response response) {
+        // HEAD requests never yield a body regardless of the response headers.
+        if (response.request().method().equals("HEAD")) {
+            return false;
+        }
+
+        int responseCode = response.code();
+        if ((responseCode < HTTP_CONTINUE || responseCode >= 200) &&
+                responseCode != HTTP_NO_CONTENT &&
+                responseCode != HTTP_NOT_MODIFIED) {
+            return true;
+        }
+
+        // If the Content-Length or Transfer-Encoding headers disagree with the response code, the
+        // response is malformed. For best compatibility, we honor the headers.
+        if (headersContentLength(response) != -1L ||
+                "chunked".equalsIgnoreCase(response.header("Transfer-Encoding"))) {
+            return true;
+        }
+
+        return false;
+    }
+
+    Long headersContentLength(Response response) {
+        if (response.header("Content-Length") != null) {
+            try {
+                return Long.parseLong(response.header("Content-Length"));
+            } catch (NumberFormatException e) {
+                return -1L;
+            }
+        } else {
+            return -1L;
+        }
     }
 
     private void onReceiveLog(HttpLogModel logModel) {
